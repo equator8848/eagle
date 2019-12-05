@@ -1,11 +1,8 @@
 package com.equator.eagle.threadpool;
 
-
 import lombok.extern.slf4j.Slf4j;
-
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -14,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  **/
 
 @Slf4j
-public class DefaultThreadPool<Job extends Runnable> implements EagleThreadPool<Job> {
+public class DefaultThreadPoolLocked<Job extends Runnable> implements EagleThreadPool<Job> {
     // 线程池工作者数目
     private static final int maxWorkerNumber = 16;
     private static final int defaultWorkerNumber = 4;
@@ -40,17 +37,15 @@ public class DefaultThreadPool<Job extends Runnable> implements EagleThreadPool<
                 synchronized (jobList) {
                     while (isRunning && jobList.isEmpty()) {
                         try {
-                            // 超时等待
-                            jobList.wait(1000);
+                            // 当前线程在jobList上等待，问题的根源
+                            jobList.wait();
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             return;
                         }
                     }
-                    // 取一个任务，这里需要判断一下任务队列是否为空，否则会发生NPE（空指针异常）
-                    if (jobList.size() > 0) {
-                        job = jobList.remove(0);
-                    }
+                    // 取一个任务
+                    job = jobList.remove(0);
                 }
                 if (job != null) {
                     try {
@@ -69,21 +64,22 @@ public class DefaultThreadPool<Job extends Runnable> implements EagleThreadPool<
         }
     }
 
-    public DefaultThreadPool() {
+    public DefaultThreadPoolLocked() {
         initWorkers(defaultWorkerNumber);
     }
 
-    public DefaultThreadPool(int initialWorkerNumber) {
+    public DefaultThreadPoolLocked(int initialWorkerNumber) {
         initWorkers(initialWorkerNumber);
     }
 
+    // 初始化工作者线程
     public int initWorkers(int num) {
+        if (num < minWorkerNumber) {
+            num = minWorkerNumber;
+        }
         int freeCapacity = maxWorkerNumber - workerList.size();
         if (num >= freeCapacity) {
             num = freeCapacity;
-        }
-        if (num < minWorkerNumber) {
-            num = minWorkerNumber;
         }
         for (int i = 0; i < num; i++) {
             Worker worker = new Worker();
@@ -144,8 +140,9 @@ public class DefaultThreadPool<Job extends Runnable> implements EagleThreadPool<
         }
     }
 
+    // 测试线程池
     public static void main(String[] args) {
-        DefaultThreadPool defaultThreadPool = new DefaultThreadPool();
+        DefaultThreadPoolLocked defaultThreadPool = new DefaultThreadPoolLocked();
         int count = 1000;
         while (count > 0) {
             int finalCount = count;
