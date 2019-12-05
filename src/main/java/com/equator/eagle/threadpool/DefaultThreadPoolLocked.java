@@ -1,6 +1,7 @@
 package com.equator.eagle.threadpool;
 
 import lombok.extern.slf4j.Slf4j;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,7 +36,7 @@ public class DefaultThreadPoolLocked<Job extends Runnable> implements EagleThrea
             while (isRunning) {
                 Job job = null;
                 synchronized (jobList) {
-                    while (isRunning && jobList.isEmpty()) {
+                    while (jobList.isEmpty()) {
                         try {
                             // 当前线程在jobList上等待，问题的根源
                             jobList.wait();
