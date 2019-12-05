@@ -6,6 +6,6 @@ package com.equator.eagle.configuration;
  **/
 
 public class ServerConfigurationHolder {
-    public static String rootPath = "/www";
+    public static String rootPath = "X:/IDEAWorkspace/eagle/www";
     public static int serverPort = 80;
 }
